@@ -5,8 +5,8 @@ Trading bot configuration
 # Exchange API credentials
 EXCHANGE_CONFIG = {
     'exchange': 'binance',  # 使用的交易所ID
-    'apiKey': 'b2a2eaacacd92fe3ec31d33442287af4378adf3e429ca793986af2fc6f9297c5',  # 替换为你的API密钥
-    'secret': '431eae2f6f28709901248b32a8d38a9ed419cfb4398adcd15871ef0360ec3759',  # 替换为你的密钥
+    'apiKey': '12345',  # 替换为你的API密钥
+    'secret': '12345',  # 替换为你的密钥
     'password': None,  # 如果需要密码，请提供
     'enableRateLimit': True,  # 启用请求频率限制（强烈建议）
     'testnet': True,  # 使用测试网络
