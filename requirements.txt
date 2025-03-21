@@ -1,0 +1,8 @@
+ccxt>=4.4.68
+numpy>=1.24.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+websockets>=11.0.3
+aiohttp>=3.8.5
+pandas>=2.0.0
+ta>=0.10.2 
