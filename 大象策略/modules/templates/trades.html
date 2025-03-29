@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大象策略 - 交易记录</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .card-header {
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+        .trade-table-container {
+            overflow-x: auto;
+        }
+        .trade-filters {
+            margin-bottom: 15px;
+        }
+        .btn-buy {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-sell {
+            background-color: #28a745;
+            color: white;
+        }
+        .profit-positive {
+            color: #28a745;
+        }
+        .profit-negative {
+            color: #dc3545;
+        }
+        .summary-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .summary-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-bar-chart-fill"></i> 大象策略
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">控制面板</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/stats">策略统计</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/trades">交易记录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings">参数设置</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logs">运行日志</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            <i class="bi bi-box-arrow-right"></i> 登出
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="container-fluid py-4">
+        <!-- 交易统计摘要 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <div class="summary-label">今日交易次数</div>
+                    <div class="summary-value" id="tradesToday">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <div class="summary-label">今日盈亏</div>
+                    <div class="summary-value" id="profitToday">0.00</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <div class="summary-label">累计交易次数</div>
+                    <div class="summary-value" id="tradesTotal">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-item">
+                    <div class="summary-label">累计盈亏</div>
+                    <div class="summary-value" id="profitTotal">0.00</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 交易记录卡片 -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>交易记录</span>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="exportTrades()">
+                        <i class="bi bi-download"></i> 导出CSV
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshTrades()">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- 筛选条件 -->
+                <div class="trade-filters">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">日期</span>
+                                <select class="form-select" id="tradeDate">
+                                    <option value="all">全部</option>
+                                    <option value="today" selected>今天</option>
+                                    <option value="yesterday">昨天</option>
+                                    <option value="week">本周</option>
+                                    <option value="month">本月</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">股票</span>
+                                <input type="text" class="form-control" id="stockCode" placeholder="输入股票代码">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">类型</span>
+                                <select class="form-select" id="tradeType">
+                                    <option value="all" selected>全部</option>
+                                    <option value="buy">买入</option>
+                                    <option value="sell">卖出</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-primary w-100" onclick="filterTrades()">
+                                <i class="bi bi-funnel"></i> 筛选
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 交易表格 -->
+                <div class="trade-table-container">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>交易时间</th>
+                                <th>股票代码</th>
+                                <th>股票名称</th>
+                                <th>交易类型</th>
+                                <th>交易价格</th>
+                                <th>交易数量</th>
+                                <th>交易金额</th>
+                                <th>手续费</th>
+                                <th>盈亏</th>
+                                <th>大象类型</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradeTableBody">
+                            <!-- 交易记录将通过JavaScript动态填充 -->
+                            {% for trade in 交易记录 %}
+                            <tr>
+                                <td>{{ trade.交易时间 }}</td>
+                                <td>{{ trade.股票代码 }}</td>
+                                <td>{{ trade.股票名称 }}</td>
+                                <td>
+                                    {% if trade.交易类型 == '买入' %}
+                                    <span class="badge bg-danger">买入</span>
+                                    {% else %}
+                                    <span class="badge bg-success">卖出</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ trade.交易价格 }}</td>
+                                <td>{{ trade.交易数量 }}</td>
+                                <td>{{ trade.交易金额 }}</td>
+                                <td>{{ trade.手续费 }}</td>
+                                <td class="{% if trade.盈亏 and trade.盈亏 > 0 %}profit-positive{% elif trade.盈亏 and trade.盈亏 < 0 %}profit-negative{% endif %}">
+                                    {{ trade.盈亏 if trade.盈亏 else '-' }}
+                                </td>
+                                <td>{{ trade.大象类型 }}</td>
+                                <td>{{ trade.状态 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <nav aria-label="交易记录分页" class="mt-4">
+                    <ul class="pagination justify-content-center" id="tradePagination">
+                        <!-- 分页控件将通过JavaScript动态填充 -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部版权信息 -->
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">大象策略 &copy; 2023 - 交易记录</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.4/dist/socket.io.min.js"></script>
+    
+    <script>
+        // 连接WebSocket
+        const socket = io();
+        
+        // 交易数据
+        let allTrades = [];
+        let currentPage = 1;
+        const perPage = 10;
+        
+        // 监听交易更新
+        socket.on('trade_update', function(data) {
+            if (data.新交易) {
+                // 添加新交易
+                allTrades.push(data.新交易);
+                
+                // 重新筛选和显示
+                filterTrades();
+                
+                // 更新统计
+                updateStatistics();
+            }
+        });
+        
+        socket.on('trades_update', function(data) {
+            if (data.交易记录) {
+                // 替换所有交易记录
+                allTrades = data.交易记录;
+                
+                // 重新筛选和显示
+                filterTrades();
+                
+                // 更新统计
+                updateStatistics();
+            }
+        });
+        
+        // 监听状态更新
+        socket.on('status_update', function(data) {
+            // 更新页面上的统计数据
+            document.getElementById('tradesToday').textContent = data.今日交易次数 || 0;
+            document.getElementById('profitToday').textContent = (data.今日盈亏 || 0).toFixed(2);
+            
+            const profitElement = document.getElementById('profitToday');
+            profitElement.textContent = (data.今日盈亏 || 0).toFixed(2);
+            
+            if (data.今日盈亏 > 0) {
+                profitElement.className = 'summary-value profit-positive';
+            } else if (data.今日盈亏 < 0) {
+                profitElement.className = 'summary-value profit-negative';
+            } else {
+                profitElement.className = 'summary-value';
+            }
+        });
+        
+        // 筛选交易记录
+        function filterTrades() {
+            const dateFilter = document.getElementById('tradeDate').value;
+            const stockFilter = document.getElementById('stockCode').value;
+            const typeFilter = document.getElementById('tradeType').value;
+            
+            // 构建筛选URL
+            let url = '/api/trades?';
+            
+            if (dateFilter !== 'all') {
+                url += `date=${dateFilter}&`;
+            }
+            
+            if (stockFilter) {
+                url += `stock=${stockFilter}&`;
+            }
+            
+            if (typeFilter !== 'all') {
+                url += `type=${typeFilter}`;
+            }
+            
+            // 请求筛选后的交易数据
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    allTrades = data.交易记录;
+                    currentPage = 1;
+                    renderTrades();
+                    updateStatistics();
+                });
+        }
+        
+        // 渲染交易记录
+        function renderTrades() {
+            const tableBody = document.getElementById('tradeTableBody');
+            tableBody.innerHTML = '';
+            
+            // 计算分页
+            const totalPages = Math.ceil(allTrades.length / perPage);
+            const start = (currentPage - 1) * perPage;
+            const end = Math.min(start + perPage, allTrades.length);
+            const displayedTrades = allTrades.slice(start, end);
+            
+            // 渲染表格行
+            displayedTrades.forEach(trade => {
+                const row = document.createElement('tr');
+                
+                // 设置行内容
+                row.innerHTML = `
+                    <td>${trade.交易时间}</td>
+                    <td>${trade.股票代码}</td>
+                    <td>${trade.股票名称 || '-'}</td>
+                    <td>
+                        ${trade.交易类型 === '买入' 
+                            ? '<span class="badge bg-danger">买入</span>' 
+                            : '<span class="badge bg-success">卖出</span>'}
+                    </td>
+                    <td>${trade.交易价格.toFixed(2)}</td>
+                    <td>${trade.交易数量}</td>
+                    <td>${(trade.交易价格 * trade.交易数量).toFixed(2)}</td>
+                    <td>${trade.手续费 ? trade.手续费.toFixed(2) : '-'}</td>
+                    <td class="${trade.盈亏 > 0 ? 'profit-positive' : trade.盈亏 < 0 ? 'profit-negative' : ''}">
+                        ${trade.盈亏 ? trade.盈亏.toFixed(2) : '-'}
+                    </td>
+                    <td>${trade.大象类型 || '-'}</td>
+                    <td>${trade.状态 || '已完成'}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // 渲染分页控件
+            renderPagination(totalPages);
+        }
+        
+        // 渲染分页
+        function renderPagination(totalPages) {
+            const pagination = document.getElementById('tradePagination');
+            pagination.innerHTML = '';
+            
+            // 上一页按钮
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.innerHTML = '&laquo;';
+            prevLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTrades();
+                }
+            });
+            
+            prevLi.appendChild(prevLink);
+            pagination.appendChild(prevLi);
+            
+            // 页码按钮
+            for (let i = 1; i <= totalPages; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = i;
+                pageLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = i;
+                    renderTrades();
+                });
+                
+                pageLi.appendChild(pageLink);
+                pagination.appendChild(pageLi);
+            }
+            
+            // 下一页按钮
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}`;
+            
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.innerHTML = '&raquo;';
+            nextLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTrades();
+                }
+            });
+            
+            nextLi.appendChild(nextLink);
+            pagination.appendChild(nextLi);
+        }
+        
+        // 刷新交易记录
+        function refreshTrades() {
+            filterTrades();
+        }
+        
+        // 更新统计数据
+        function updateStatistics() {
+            // 计算总交易次数
+            document.getElementById('tradesTotal').textContent = allTrades.length;
+            
+            // 计算总盈亏
+            const totalProfit = allTrades.reduce((sum, trade) => {
+                return sum + (trade.盈亏 || 0);
+            }, 0);
+            
+            const profitTotalElement = document.getElementById('profitTotal');
+            profitTotalElement.textContent = totalProfit.toFixed(2);
+            
+            if (totalProfit > 0) {
+                profitTotalElement.className = 'summary-value profit-positive';
+            } else if (totalProfit < 0) {
+                profitTotalElement.className = 'summary-value profit-negative';
+            } else {
+                profitTotalElement.className = 'summary-value';
+            }
+        }
+        
+        // 导出交易记录为CSV
+        function exportTrades() {
+            // 构建CSV内容
+            let csvContent = "交易时间,股票代码,股票名称,交易类型,交易价格,交易数量,交易金额,手续费,盈亏,大象类型,状态\n";
+            
+            allTrades.forEach(trade => {
+                const row = [
+                    trade.交易时间,
+                    trade.股票代码,
+                    trade.股票名称 || '',
+                    trade.交易类型,
+                    trade.交易价格,
+                    trade.交易数量,
+                    (trade.交易价格 * trade.交易数量).toFixed(2),
+                    trade.手续费 || '',
+                    trade.盈亏 || '',
+                    trade.大象类型 || '',
+                    trade.状态 || '已完成'
+                ];
+                
+                // 添加到CSV内容
+                csvContent += row.join(',') + '\n';
+            });
+            
+            // 创建下载链接
+            const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `大象策略交易记录_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            
+            // 触发下载
+            link.click();
+            
+            // 清理
+            document.body.removeChild(link);
+        }
+        
+        // 页面加载完成后
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始加载数据
+            filterTrades();
+            
+            // 设置自动刷新
+            setInterval(function() {
+                socket.emit('request_status');
+            }, {{ 刷新间隔 * 1000 }});
+        });
+    </script>
+</body>
+</html> 

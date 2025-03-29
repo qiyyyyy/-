@@ -1,0 +1,567 @@
+{% extends "base.html" %}
+
+{% block title %}品种参数设置{% endblock %}
+
+{% block styles %}
+<style>
+    .param-card {
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .param-title {
+        font-weight: bold;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+    }
+    .param-description {
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: 5px;
+    }
+    #symbolSelector {
+        max-width: 300px;
+    }
+    .action-buttons {
+        margin: 20px 0;
+    }
+    .settings-section {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #eee;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .tooltip-icon {
+        cursor: help;
+    }
+    .stock-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .add-stock-form {
+        margin-bottom: 15px;
+    }
+    .status-badge {
+        font-size: 0.8rem;
+    }
+    #debugArea {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    #debugOutput {
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        white-space: pre-wrap;
+        background-color: #000;
+        color: #0f0;
+        padding: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>品种参数设置</h2>
+    <p class="text-muted">单独设置每个品种的特定参数，没有设置的参数将使用全局默认值</p>
+    
+    {% if 提示信息 %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i> {{ 提示信息 }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- 调试区域 -->
+    <div id="debugArea" class="mb-4">
+        <h5>调试信息</h5>
+        <div id="debugOutput"></div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>交易品种列表</h5>
+                </div>
+                <div class="card-body">
+                    <div class="add-stock-form">
+                        <div class="input-group">
+                            <input type="text" id="newStockCode" class="form-control" placeholder="输入股票代码" maxlength="6" pattern="[0-9]{6}">
+                            <button class="btn btn-primary" id="addStockBtn">添加</button>
+                        </div>
+                        <small class="form-text text-muted">股票代码必须为6位数字</small>
+                    </div>
+                    
+                    <div class="list-group stock-list" id="stockList">
+                        {% for symbol in 股票列表 %}
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center stock-item" data-symbol="{{ symbol }}">
+                            {{ symbol }}
+                            <button class="btn btn-sm btn-danger remove-stock-btn" data-symbol="{{ symbol }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if not 股票列表 %}
+                    <div class="alert alert-info">
+                        没有添加交易品种，请先添加
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card param-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 id="currentSymbolTitle">请选择交易品种</h5>
+                        <div>
+                            <span class="badge bg-info">只读模式</span>
+                            <small class="text-muted ms-2">参数只能通过配置文件修改</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="noSymbolSelected" class="alert alert-info">
+                        请从左侧列表选择一个交易品种进行参数设置
+                    </div>
+                    
+                    <div id="symbolParamsForm" style="display: none;">
+                        <!-- 大象识别参数 -->
+                        <div class="settings-section">
+                            <h5 class="param-title">大象识别参数</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="elephant_threshold" class="form-label">大象委托量阈值</label>
+                                    <input type="number" class="form-control" id="elephant_threshold" name="大象识别.大象委托量阈值" readonly>
+                                    <div class="param-description">判定为大象的最小委托量(元)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="elephant_price_diff" class="form-label">大象价差阈值(档位)</label>
+                                    <input type="number" class="form-control" id="elephant_price_diff" name="大象识别.大象价差阈值" step="1" min="1">
+                                    <div class="param-description">大象与卖一价的最大档位数量(整数)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="confirm_count" class="form-label">大象确认次数</label>
+                                    <input type="number" class="form-control" id="confirm_count" name="大象识别.大象确认次数">
+                                    <div class="param-description">确认大象存在的检测次数</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="stable_time" class="form-label">大象稳定时间</label>
+                                    <input type="number" class="form-control" id="stable_time" name="大象识别.大象稳定时间">
+                                    <div class="param-description">大象稳定存在的最小秒数</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_sell_detection" name="大象识别.启用卖单识别">
+                                        <label class="form-check-label" for="enable_sell_detection">启用卖单识别</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="sell_threshold" class="form-label">卖单委托量阈值</label>
+                                    <input type="number" class="form-control" id="sell_threshold" name="大象识别.卖单委托量阈值">
+                                    <div class="param-description">判定为卖单大象的最小委托量(元)</div>
+                                </div>
+                                <div class="col-md-6 mt-3">
+                                    <label for="sell_price_diff" class="form-label">卖单价差阈值(档位)</label>
+                                    <input type="number" class="form-control" id="sell_price_diff" name="大象识别.卖单价差阈值" step="1" min="1">
+                                    <div class="param-description">卖单大象与买一价的最大档位数量(整数)</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 交易执行参数 -->
+                        <div class="settings-section">
+                            <h5 class="param-title">交易执行参数</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="price_offset" class="form-label">价格偏移量</label>
+                                    <input type="number" class="form-control" id="price_offset" name="交易执行.价格偏移量" step="0.01">
+                                    <div class="param-description">最小价格变动单位</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="wait_time" class="form-label">等待时间</label>
+                                    <input type="number" class="form-control" id="wait_time" name="交易执行.等待时间">
+                                    <div class="param-description">等待订单成交的最长时间(秒)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="cooldown_time" class="form-label">冷却时间</label>
+                                    <input type="number" class="form-control" id="cooldown_time" name="交易执行.冷却时间">
+                                    <div class="param-description">同一股票交易后的冷却时间(秒)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="tease_volume" class="form-label">调戏交易量</label>
+                                    <input type="number" class="form-control" id="tease_volume" name="交易执行.调戏交易量">
+                                    <div class="param-description">调戏模式下每次交易的数量</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 风险控制参数 -->
+                        <div class="settings-section">
+                            <h5 class="param-title">风险控制参数</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="max_loss_per_trade" class="form-label">单笔最大亏损比例</label>
+                                    <input type="number" class="form-control" id="max_loss_per_trade" name="风险控制.单笔最大亏损比例" step="0.01">
+                                    <div class="param-description">单笔交易最大亏损占总资产比例</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="max_loss_per_stock" class="form-label">单股最大亏损比例</label>
+                                    <input type="number" class="form-control" id="max_loss_per_stock" name="风险控制.单股最大亏损比例" step="0.01">
+                                    <div class="param-description">单只股票日内最大亏损占总资产比例</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="max_trades_per_stock" class="form-label">单股最大交易次数</label>
+                                    <input type="number" class="form-control" id="max_trades_per_stock" name="风险控制.单股最大交易次数">
+                                    <div class="param-description">单只股票日内最大交易次数</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="total_trades_limit" class="form-label">总交易次数限制</label>
+                                    <input type="number" class="form-control" id="total_trades_limit" name="风险控制.总交易次数限制">
+                                    <div class="param-description">日内总交易次数限制</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 资金管理参数 -->
+                        <div class="settings-section">
+                            <h5 class="param-title">资金管理参数</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="max_position_per_stock" class="form-label">单股最大仓位比例</label>
+                                    <input type="number" class="form-control" id="max_position_per_stock" name="资金管理.单股最大仓位比例" step="0.01">
+                                    <div class="param-description">单只股票最大持仓占总资产比例</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        let currentSymbol = null;
+        let originalParams = {};
+        
+        // 调试函数 - 添加到调试区域
+        function debugLog(message, data) {
+            const timestamp = new Date().toLocaleTimeString();
+            let logText = `[${timestamp}] ${message}\n`;
+            
+            if (data) {
+                if (typeof data === 'object') {
+                    logText += JSON.stringify(data, null, 2) + '\n';
+                } else {
+                    logText += data + '\n';
+                }
+            }
+            
+            const debugOutput = $('#debugOutput');
+            debugOutput.prepend(logText);
+        }
+        
+        // 记录初始状态
+        debugLog("页面加载完成", {
+            "股票列表": {{ 股票列表|tojson|safe if 股票列表 else '[]' }}
+        });
+        
+        // 选择股票
+        $(document).on('click', '.stock-item', function(e) {
+            e.preventDefault();
+            if($(e.target).hasClass('remove-stock-btn') || $(e.target).parent().hasClass('remove-stock-btn')) {
+                return;
+            }
+            
+            const symbol = $(this).data('symbol');
+            currentSymbol = symbol;
+            
+            debugLog(`选择股票: ${symbol}`);
+            
+            // 更新UI
+            $('.stock-item').removeClass('active');
+            $(this).addClass('active');
+            $('#currentSymbolTitle').text('品种参数: ' + symbol);
+            $('#noSymbolSelected').hide();
+            $('#symbolParamsForm').show();
+            
+            // 加载参数
+            loadSymbolParams(symbol);
+        });
+        
+        // 加载品种参数
+        function loadSymbolParams(symbol) {
+            debugLog(`开始加载品种参数: ${symbol}`);
+            showAlert(`正在加载品种 ${symbol} 的参数...`, 'info', 1000);
+            
+            $.ajax({
+                url: '/get_symbol_params/' + symbol,
+                method: 'GET',
+                success: function(data) {
+                    debugLog(`加载品种参数成功: ${symbol}`, data);
+                    
+                    // 保存原始参数用于比较是否有修改
+                    originalParams = JSON.parse(JSON.stringify(data));
+                    
+                    // 清空所有输入字段
+                    $('#symbolParamsForm input').val('');
+                    $('#symbolParamsForm input[type="checkbox"]').prop('checked', false);
+                    
+                    // 填充参数值
+                    for (const module in data) {
+                        for (const param in data[module]) {
+                            const input = $(`input[name="${module}.${param}"]`);
+                            if (input.length) {
+                                if (input.attr('type') === 'checkbox') {
+                                    input.prop('checked', data[module][param]);
+                                } else {
+                                    input.val(data[module][param]);
+                                }
+                            } else {
+                                debugLog(`未找到参数对应的输入框: ${module}.${param}`);
+                            }
+                        }
+                    }
+                    
+                    // 显示是否使用了全局参数的提示
+                    if (symbol in originalParams._品种特定参数标记) {
+                        showAlert(`已加载品种 ${symbol} 的特定参数`, 'success');
+                    } else {
+                        showAlert(`品种 ${symbol} 当前使用全局默认参数，您可以设置特定参数`, 'info');
+                    }
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.error || '未知错误';
+                    debugLog(`加载参数失败: ${symbol}`, {
+                        error: errorMsg,
+                        status: xhr.status,
+                        statusText: xhr.statusText
+                    });
+                    showAlert('加载参数失败: ' + errorMsg, 'danger');
+                }
+            });
+        }
+        
+        // 保存参数
+        $('#saveParamsBtn').click(function() {
+            if (!currentSymbol) return;
+            
+            debugLog(`开始保存品种参数: ${currentSymbol}`);
+            
+            // 收集参数
+            const params = {};
+            $('#symbolParamsForm input').each(function() {
+                const name = $(this).attr('name');
+                if (!name) return;
+                
+                const [module, param] = name.split('.');
+                if (!module || !param) return;
+                
+                if (!params[module]) params[module] = {};
+                
+                let value;
+                if ($(this).attr('type') === 'checkbox') {
+                    value = $(this).prop('checked');
+                } else if ($(this).attr('type') === 'number') {
+                    value = parseFloat($(this).val());
+                    if (isNaN(value)) return;
+                } else {
+                    value = $(this).val();
+                }
+                
+                params[module][param] = value;
+            });
+            
+            debugLog(`收集到的参数`, params);
+            
+            // 保存参数
+            $.ajax({
+                url: '/save_symbol_params/' + currentSymbol,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(params),
+                success: function(data) {
+                    debugLog(`保存参数成功: ${currentSymbol}`, data);
+                    showAlert('参数保存成功', 'success');
+                    originalParams = JSON.parse(JSON.stringify(params));
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.error || '未知错误';
+                    debugLog(`保存参数失败: ${currentSymbol}`, {
+                        error: errorMsg,
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        sentData: params
+                    });
+                    showAlert('保存参数失败: ' + errorMsg, 'danger');
+                }
+            });
+        });
+        
+        // 重置参数
+        $('#resetParamsBtn').click(function() {
+            if (!currentSymbol) return;
+            
+            if (!confirm('确定要重置该品种的所有特定参数，恢复使用全局默认值吗？')) {
+                return;
+            }
+            
+            debugLog(`开始重置品种参数: ${currentSymbol}`);
+            
+            $.ajax({
+                url: '/reset_symbol_params/' + currentSymbol,
+                method: 'POST',
+                success: function(data) {
+                    debugLog(`重置参数成功: ${currentSymbol}`, data);
+                    showAlert('参数已重置为全局默认', 'success');
+                    loadSymbolParams(currentSymbol);
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.error || '未知错误';
+                    debugLog(`重置参数失败: ${currentSymbol}`, {
+                        error: errorMsg,
+                        status: xhr.status,
+                        statusText: xhr.statusText
+                    });
+                    showAlert('重置参数失败: ' + errorMsg, 'danger');
+                }
+            });
+        });
+        
+        // 添加股票
+        $('#addStockBtn').click(function() {
+            const stockCode = $('#newStockCode').val().trim();
+            if (!stockCode || !/^\d{6}$/.test(stockCode)) {
+                showAlert('请输入有效的6位股票代码', 'warning');
+                return;
+            }
+            
+            debugLog(`开始添加股票: ${stockCode}`);
+            
+            $.ajax({
+                url: '/add_stock',
+                method: 'POST',
+                data: { stock_code: stockCode },
+                success: function(data) {
+                    debugLog(`添加股票结果`, data);
+                    
+                    if (data.success) {
+                        showAlert('添加成功', 'success');
+                        // 添加到列表
+                        $('#stockList').append(`
+                            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center stock-item" data-symbol="${stockCode}">
+                                ${stockCode}
+                                <button class="btn btn-sm btn-danger remove-stock-btn" data-symbol="${stockCode}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </a>
+                        `);
+                        $('#newStockCode').val('');
+                    } else {
+                        showAlert(data.error || '添加失败', 'danger');
+                    }
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.error || '未知错误';
+                    debugLog(`添加股票失败: ${stockCode}`, {
+                        error: errorMsg,
+                        status: xhr.status,
+                        statusText: xhr.statusText
+                    });
+                    showAlert('添加失败: ' + errorMsg, 'danger');
+                }
+            });
+        });
+        
+        // 删除股票
+        $(document).on('click', '.remove-stock-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const symbol = $(this).data('symbol');
+            if (!confirm(`确定要从交易列表中删除股票 ${symbol} 吗？`)) {
+                return;
+            }
+            
+            debugLog(`开始删除股票: ${symbol}`);
+            
+            $.ajax({
+                url: '/remove_stock/' + symbol,
+                method: 'POST',
+                success: function(data) {
+                    debugLog(`删除股票结果`, data);
+                    
+                    if (data.success) {
+                        showAlert('删除成功', 'success');
+                        // 从列表移除
+                        $(`.stock-item[data-symbol="${symbol}"]`).remove();
+                        
+                        // 如果删除的是当前选中的股票，清空右侧表单
+                        if (currentSymbol === symbol) {
+                            currentSymbol = null;
+                            $('#currentSymbolTitle').text('请选择交易品种');
+                            $('#noSymbolSelected').show();
+                            $('#symbolParamsForm').hide();
+                            $('#saveParamsBtn').prop('disabled', true);
+                            $('#resetParamsBtn').prop('disabled', true);
+                        }
+                    } else {
+                        showAlert(data.error || '删除失败', 'danger');
+                    }
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.error || '未知错误';
+                    debugLog(`删除股票失败: ${symbol}`, {
+                        error: errorMsg,
+                        status: xhr.status,
+                        statusText: xhr.statusText
+                    });
+                    showAlert('删除失败: ' + errorMsg, 'danger');
+                }
+            });
+        });
+        
+        // 显示提示信息
+        function showAlert(message, type = 'info') {
+            debugLog(`显示提示: ${type}`, message);
+            
+            const alertEl = $(`<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>`);
+            
+            // 将提示添加到页面顶部
+            $('.container').prepend(alertEl);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                alertEl.alert('close');
+            }, 3000);
+        }
+    });
+</script>
+{% endblock %}

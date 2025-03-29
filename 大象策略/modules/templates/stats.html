@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大象策略 - 策略统计</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .card-header {
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-bar-chart-fill"></i> 大象策略
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">控制面板</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/stats">策略统计</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/trades">交易记录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings">参数设置</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logs">运行日志</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            <i class="bi bi-box-arrow-right"></i> 登出
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        盈亏统计
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="profitChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        交易次数统计
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="tradeCountChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        大象识别统计
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="elephantChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        胜率统计
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="winRateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部版权信息 -->
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">大象策略 &copy; 2023 - 策略统计</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="{{ url_for('static', filename='js/polling.js') }}"></script>
+    
+    <script>
+        // 创建图表数据
+        function createChartData() {
+            // 假数据
+            const dates = Array.from({length: 7}, (_, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                return date.toLocaleDateString('zh-CN');
+            }).reverse();
+            
+            // 盈亏数据
+            const profitData = {
+                labels: dates,
+                datasets: [{
+                    label: '每日盈亏',
+                    data: [350, -120, 250, 420, -180, 310, 520],
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }]
+            };
+            
+            // 交易次数数据
+            const tradeCountData = {
+                labels: dates,
+                datasets: [{
+                    label: '交易次数',
+                    data: [12, 19, 15, 21, 18, 25, 22],
+                    backgroundColor: 'rgba(23, 162, 184, 0.2)',
+                    borderColor: 'rgba(23, 162, 184, 1)',
+                    borderWidth: 2
+                }]
+            };
+            
+            // 大象识别数据
+            const elephantData = {
+                labels: ['上方大象', '下方大象'],
+                datasets: [{
+                    label: '大象类型分布',
+                    data: [65, 35],
+                    backgroundColor: [
+                        'rgba(220, 53, 69, 0.5)',
+                        'rgba(40, 167, 69, 0.5)'
+                    ],
+                    borderColor: [
+                        'rgba(220, 53, 69, 1)',
+                        'rgba(40, 167, 69, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+            
+            // 胜率数据
+            const winRateData = {
+                labels: ['胜', '负'],
+                datasets: [{
+                    label: '交易胜率',
+                    data: [72, 28],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.5)',
+                        'rgba(220, 53, 69, 0.5)'
+                    ],
+                    borderColor: [
+                        'rgba(40, 167, 69, 1)',
+                        'rgba(220, 53, 69, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+            
+            return {
+                profitData,
+                tradeCountData,
+                elephantData,
+                winRateData
+            };
+        }
+        
+        // 初始化图表
+        function initCharts() {
+            const chartData = createChartData();
+            
+            // 盈亏图表
+            new Chart(document.getElementById('profitChart'), {
+                type: 'line',
+                data: chartData.profitData,
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // 交易次数图表
+            new Chart(document.getElementById('tradeCountChart'), {
+                type: 'bar',
+                data: chartData.tradeCountData,
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // 大象识别图表
+            new Chart(document.getElementById('elephantChart'), {
+                type: 'pie',
+                data: chartData.elephantData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+            
+            // 胜率图表
+            new Chart(document.getElementById('winRateChart'), {
+                type: 'doughnut',
+                data: chartData.winRateData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 页面加载完成后初始化图表和轮询
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化图表
+            initCharts();
+            
+            // 初始化轮询机制
+            initPolling();
+            
+            // 启动资产数据轮询
+            startPolling('assets', '/api/assets', updateAssetsDisplay, {{ 刷新间隔 * 1000 }});
+        });
+        
+        // 更新资产数据显示
+        function updateAssetsDisplay(data) {
+            console.log('更新统计数据:', data);
+            // 这里可以根据返回的数据更新图表
+            // TODO: 根据实际API返回数据结构实现图表更新
+        }
+    </script>
+</body>
+</html>

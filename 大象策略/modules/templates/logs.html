@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大象策略 - 运行日志</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .card-header {
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+        .log-container {
+            max-height: 700px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 8px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-time {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-right: 10px;
+        }
+        .log-message {
+            font-size: 0.95rem;
+        }
+        .log-filters {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-bar-chart-fill"></i> 大象策略
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">控制面板</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/stats">策略统计</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/trades">交易记录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings">参数设置</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/logs">运行日志</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            <i class="bi bi-box-arrow-right"></i> 登出
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="container-fluid py-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>运行日志</span>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()">
+                        <i class="bi bi-trash"></i> 清空显示
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshLogs()">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="log-filters p-3">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text">过滤内容</span>
+                                <input type="text" class="form-control" id="logFilter" placeholder="输入关键词过滤">
+                                <button class="btn btn-outline-secondary" type="button" onclick="applyLogFilter()">
+                                    <i class="bi bi-funnel"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text">日期</span>
+                                <input type="date" class="form-control" id="logDate">
+                                <button class="btn btn-outline-secondary" type="button" onclick="applyLogFilter()">
+                                    <i class="bi bi-calendar3"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="autoScroll" checked>
+                                <label class="form-check-label" for="autoScroll">自动滚动到最新日志</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="log-container" id="logContainer">
+                    {% for log in 日志 %}
+                    <div class="log-entry">
+                        <span class="log-time">{{ log.时间 }}</span>
+                        <span class="log-message">{{ log.消息 }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部版权信息 -->
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">大象策略 &copy; 2023 - 日志共 <span id="logCount">{{ 日志|length }}</span> 条</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/polling.js') }}"></script>
+    
+    <script>
+        // 连接WebSocket
+        const socket = io();
+        
+        // 日志容器
+        const logContainer = document.getElementById('logContainer');
+        
+        // 监听日志更新
+        socket.on('log_update', function(data) {
+            if (data.新日志) {
+                // 添加单条新日志
+                addLogEntry(data.新日志);
+            } else if (data.日志) {
+                // 替换所有日志
+                logContainer.innerHTML = '';
+                data.日志.forEach(log => {
+                    addLogEntry(log);
+                });
+            }
+            
+            // 更新日志计数
+            document.getElementById('logCount').textContent = document.querySelectorAll('.log-entry').length;
+            
+            // 自动滚动到底部
+            if (document.getElementById('autoScroll').checked) {
+                scrollToBottom();
+            }
+        });
+        
+        // 添加日志条目
+        function addLogEntry(log) {
+            // 应用过滤器
+            const filterText = document.getElementById('logFilter').value.toLowerCase();
+            const filterDate = document.getElementById('logDate').value;
+            
+            if (filterText && !log.消息.toLowerCase().includes(filterText)) {
+                return;
+            }
+            
+            if (filterDate && !log.时间.startsWith(filterDate)) {
+                return;
+            }
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = log.时间;
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.className = 'log-message';
+            messageSpan.textContent = log.消息;
+            
+            logEntry.appendChild(timeSpan);
+            logEntry.appendChild(messageSpan);
+            
+            logContainer.appendChild(logEntry);
+        }
+        
+        // 应用日志过滤器
+        function applyLogFilter() {
+            // 请求所有日志并重新过滤
+            socket.emit('request_logs');
+        }
+        
+        // 清空日志显示
+        function clearLogs() {
+            logContainer.innerHTML = '';
+            document.getElementById('logCount').textContent = '0';
+        }
+        
+        // 刷新日志
+        function refreshLogs() {
+            socket.emit('request_logs');
+        }
+        
+        // 滚动到底部
+        function scrollToBottom() {
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // 页面加载完成后
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始滚动到底部
+            scrollToBottom();
+            
+            // 设置今天日期为默认值
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('logDate').value = '';
+            
+            // 设置自动刷新
+            setInterval(function() {
+                if (document.getElementById('autoScroll').checked) {
+                    socket.emit('request_logs');
+                }
+            }, {{ 刷新间隔 * 1000 }});
+        });
+    </script>
+</body>
+</html>

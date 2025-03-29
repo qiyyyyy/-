@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大象策略 - 参数设置</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .card-header {
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+        .param-title {
+            font-weight: 600;
+            color: #343a40;
+            margin-bottom: 0.5rem;
+        }
+        .param-description {
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        .tooltip-icon {
+            color: #6c757d;
+            cursor: help;
+        }
+        .form-range-value {
+            font-weight: bold;
+            text-align: center;
+            min-width: 40px;
+            display: inline-block;
+        }
+        .settings-section {
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-bar-chart-fill"></i> 大象策略
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">控制面板</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/stats">策略统计</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/trades">交易记录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/settings">参数设置</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logs">运行日志</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            <i class="bi bi-box-arrow-right"></i> 登出
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-lg-9">
+                <form>
+                    <!-- 交易参数设置卡片 -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>交易参数</span>
+                            <div>
+                                <span class="badge bg-info">只读模式</span>
+                                <small class="text-muted ms-2">参数只能通过配置文件修改</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- 大象策略参数 -->
+                            <div class="settings-section">
+                                <h5 class="param-title">大象识别参数</h5>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="min_elephant_amount" class="form-label d-flex justify-content-between">
+                                            <span>最小大象金额 (万元)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="单笔成交超过该金额才会被识别为大象"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="min_elephant_amount" name="最小大象金额"
+                                               value="{{ 参数.最小大象金额|default(100) }}" step="10" min="10" max="1000">
+                                        <div class="param-description">建议设置在50-200万之间</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="elephant_time_window" class="form-label d-flex justify-content-between">
+                                            <span>大象有效时间 (分钟)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="大象出现后的有效追踪时间"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="elephant_time_window" name="大象有效时间"
+                                               value="{{ 参数.大象有效时间|default(30) }}" step="5" min="5" max="120">
+                                        <div class="param-description">大象出现后多久内会触发交易</div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="upper_elephant_distance" class="form-label d-flex justify-content-between">
+                                            <span>上方大象距离 (%)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="当前价格与上方大象价格的最小距离百分比"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="upper_elephant_distance" name="上方大象距离"
+                                               value="{{ 参数.上方大象距离|default(1.5) }}" step="0.1" min="0.5" max="5.0">
+                                        <div class="param-description">与当前价格的百分比间距</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="lower_elephant_distance" class="form-label d-flex justify-content-between">
+                                            <span>下方大象距离 (%)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="当前价格与下方大象价格的最小距离百分比"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="lower_elephant_distance" name="下方大象距离"
+                                               value="{{ 参数.下方大象距离|default(1.5) }}" step="0.1" min="0.5" max="5.0">
+                                        <div class="param-description">与当前价格的百分比间距</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 交易执行参数 -->
+                            <div class="settings-section">
+                                <h5 class="param-title">交易执行参数</h5>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="position_size" class="form-label d-flex justify-content-between">
+                                            <span>单次交易金额 (元)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="每次触发交易的资金量"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="position_size" name="单次交易金额"
+                                               value="{{ 参数.单次交易金额|default(20000) }}" step="1000" min="5000" max="1000000">
+                                        <div class="param-description">建议根据账户规模合理设置</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="max_concurrent_trades" class="form-label d-flex justify-content-between">
+                                            <span>最大同时交易数</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="最多同时进行的交易数量"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="max_concurrent_trades" name="最大同时交易数"
+                                               value="{{ 参数.最大同时交易数|default(5) }}" step="1" min="1" max="20">
+                                        <div class="param-description">建议根据资金规模合理设置</div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="profit_target" class="form-label d-flex justify-content-between">
+                                            <span>止盈目标 (%)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="达到该百分比盈利时自动平仓"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="profit_target" name="止盈目标"
+                                               value="{{ 参数.止盈目标|default(3.0) }}" step="0.1" min="0.5" max="10.0">
+                                        <div class="param-description">建议根据股票波动性调整</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="stop_loss" class="form-label d-flex justify-content-between">
+                                            <span>止损阈值 (%)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="亏损达到该百分比时自动平仓止损"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="stop_loss" name="止损阈值"
+                                               value="{{ 参数.止损阈值|default(2.0) }}" step="0.1" min="0.5" max="5.0">
+                                        <div class="param-description">建议止损阈值小于止盈目标</div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="trailing_stop" class="form-label d-flex justify-content-between">
+                                            <span>追踪止损 (%)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="价格回撤该百分比时平仓，保护已有利润"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="trailing_stop" name="追踪止损"
+                                               value="{{ 参数.追踪止损|default(1.0) }}" step="0.1" min="0.3" max="3.0">
+                                        <div class="param-description">高于0时启用追踪止损功能</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cooldown_minutes" class="form-label d-flex justify-content-between">
+                                            <span>交易冷却期 (分钟)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="同一股票两次交易之间的最小间隔时间"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="cooldown_minutes" name="交易冷却期"
+                                               value="{{ 参数.交易冷却期|default(60) }}" step="5" min="0" max="1440">
+                                        <div class="param-description">避免频繁交易同一股票</div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_upper_elephant" name="启用上方大象"
+                                                   {% if 参数.启用上方大象|default(true) %}checked{% endif %}>
+                                            <label class="form-check-label" for="enable_upper_elephant">启用上方大象策略</label>
+                                        </div>
+                                        <div class="param-description">上方大象策略是先卖后买</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_lower_elephant" name="启用下方大象"
+                                                   {% if 参数.启用下方大象|default(true) %}checked{% endif %}>
+                                            <label class="form-check-label" for="enable_lower_elephant">启用下方大象策略</label>
+                                        </div>
+                                        <div class="param-description">下方大象策略是先买后卖</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 风控参数 -->
+                            <div class="settings-section">
+                                <h5 class="param-title">风控参数</h5>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="max_daily_loss" class="form-label d-flex justify-content-between">
+                                            <span>每日最大亏损 (元)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="当日亏损超过该金额时暂停交易"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="max_daily_loss" name="每日最大亏损"
+                                               value="{{ 参数.每日最大亏损|default(5000) }}" step="1000" min="1000" max="100000">
+                                        <div class="param-description">建议为账户总额的1%-3%</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="max_position_ratio" class="form-label d-flex justify-content-between">
+                                            <span>最大持仓比例 (%)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="账户中用于交易的最大资金比例"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="max_position_ratio" name="最大持仓比例"
+                                               value="{{ 参数.最大持仓比例|default(80) }}" step="5" min="10" max="100">
+                                        <div class="param-description">建议保留部分现金以应对市场波动</div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="max_single_stock_position" class="form-label d-flex justify-content-between">
+                                            <span>单股最大持仓 (%)</span>
+                                            <i class="bi bi-info-circle tooltip-icon" title="单只股票的最大持仓比例"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="max_single_stock_position" name="单股最大持仓"
+                                               value="{{ 参数.单股最大持仓|default(20) }}" step="1" min="5" max="50">
+                                        <div class="param-description">降低单股集中度风险</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_auto_shutdown" name="启用自动停机"
+                                                   {% if 参数.启用自动停机|default(true) %}checked{% endif %}>
+                                            <label class="form-check-label" for="enable_auto_shutdown">启用风控自动停机</label>
+                                        </div>
+                                        <div class="param-description">触发风控条件时自动停止交易</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- 系统设置卡片 -->
+                <div class="card">
+                    <div class="card-header">系统设置</div>
+                    <div class="card-body">
+                        <div class="settings-section">
+                            <h5 class="param-title">网页管理设置</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="web_port" class="form-label">端口号</label>
+                                    <input type="number" class="form-control" id="web_port" name="端口"
+                                           value="{{ 参数.端口|default(8088) }}" min="1024" max="65535">
+                                    <div class="param-description">Web服务监听端口，修改后需要重启</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="refresh_interval" class="form-label">刷新间隔 (秒)</label>
+                                    <input type="number" class="form-control" id="refresh_interval" name="刷新间隔"
+                                           value="{{ 参数.刷新间隔|default(3) }}" min="1" max="60">
+                                    <div class="param-description">数据刷新频率，过快会增加系统负担</div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="allow_remote_access" name="允许远程访问"
+                                               {% if 参数.允许远程访问|default(false) %}checked{% endif %}>
+                                        <label class="form-check-label" for="allow_remote_access">允许远程访问</label>
+                                    </div>
+                                    <div class="param-description">允许从其他设备访问Web界面，存在安全风险</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="auto_open_browser" name="自动打开浏览器"
+                                               {% if 参数.自动打开浏览器|default(true) %}checked{% endif %}>
+                                        <label class="form-check-label" for="auto_open_browser">自动打开浏览器</label>
+                                    </div>
+                                    <div class="param-description">启动时自动打开浏览器访问Web界面</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 保存配置卡片 -->
+            <div class="col-lg-3">
+                <div class="card mb-4">
+                    <div class="card-header">设置管理</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-primary w-100 mb-2" onclick="document.querySelector('form').submit()">
+                                <i class="bi bi-save"></i> 保存所有设置
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary w-100 mb-2" onclick="document.querySelector('form').reset()">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置为当前值
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-outline-warning w-100 mb-2" onclick="resetToDefault()">
+                                <i class="bi bi-arrow-repeat"></i> 恢复默认设置
+                            </button>
+                            <button type="button" class="btn btn-outline-info w-100" onclick="exportSettings()">
+                                <i class="bi bi-download"></i> 导出设置
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <label for="importSettings" class="form-label">导入设置</label>
+                            <input class="form-control" type="file" id="importSettings" accept=".json">
+                        </div>
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle"></i> 修改参数后需要点击"保存所有设置"按钮才会生效!
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 参数说明卡片 -->
+                <div class="card">
+                    <div class="card-header">参数说明</div>
+                    <div class="card-body">
+                        <p>参数设置影响策略的运行表现，请谨慎调整。建议步骤：</p>
+                        <ol>
+                            <li>先以默认参数运行，观察策略表现</li>
+                            <li>针对单个参数进行小幅调整</li>
+                            <li>观察调整后的效果再进行下一步修改</li>
+                            <li>定期导出设置以备份配置</li>
+                        </ol>
+                        <p>如果不确定某个参数的影响，可以将鼠标悬停在参数名称旁的<i class="bi bi-info-circle"></i>图标上查看说明。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部版权信息 -->
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">大象策略 &copy; 2023 - 参数设置</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.4/dist/socket.io.min.js"></script>
+    
+    <script>
+        // 连接WebSocket
+        const socket = io();
+        
+        // 启用Bootstrap工具提示
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // 恢复默认设置
+        function resetToDefault() {
+            if (confirm('确定要恢复所有设置到默认值吗？这将覆盖您当前的所有自定义设置。')) {
+                // 这里可以通过API请求恢复默认值
+                // 简单示例：刷新页面
+                location.reload();
+            }
+        }
+        
+        // 导出设置
+        function exportSettings() {
+            // 收集所有表单字段值
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+            const settings = {};
+            
+            for (let [key, value] of formData.entries()) {
+                // 转换数值和布尔值
+                if (value === 'on') {
+                    settings[key] = true;
+                } else if (value === 'off') {
+                    settings[key] = false;
+                } else if (!isNaN(Number(value))) {
+                    settings[key] = Number(value);
+                } else {
+                    settings[key] = value;
+                }
+            }
+            
+            // 导出为JSON文件
+            const settingsJson = JSON.stringify(settings, null, 2);
+            const blob = new Blob([settingsJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `大象策略设置_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(function() {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 0);
+        }
+        
+        // 导入设置
+        document.getElementById('importSettings').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const settings = JSON.parse(e.target.result);
+                    
+                    // 将导入的设置应用到表单
+                    Object.keys(settings).forEach(key => {
+                        const input = document.querySelector(`[name="${key}"]`);
+                        if (input) {
+                            if (input.type === 'checkbox') {
+                                input.checked = Boolean(settings[key]);
+                            } else {
+                                input.value = settings[key];
+                            }
+                        }
+                    });
+                    
+                    alert('设置已导入，请点击"保存所有设置"按钮使其生效。');
+                } catch (error) {
+                    alert('导入失败：文件格式错误');
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        });
+        
+        // 页面加载完成后
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化滑块值显示
+            document.querySelectorAll('input[type="range"]').forEach(function(slider) {
+                const valueDisplay = document.getElementById(slider.id + 'Value');
+                if (valueDisplay) {
+                    valueDisplay.textContent = slider.value;
+                    
+                    slider.addEventListener('input', function() {
+                        valueDisplay.textContent = this.value;
+                    });
+                }
+            });
+            
+            // 设置自动刷新
+            setInterval(function() {
+                socket.emit('request_status');
+            }, {{ 刷新间隔 * 1000 }});
+        });
+    </script>
+</body>
+</html>

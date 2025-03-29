@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}大象策略管理{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            padding-top: 56px;
+            background-color: #f5f5f5;
+        }
+        .sidebar {
+            background-color: #f8f9fa;
+            min-height: calc(100vh - 56px);
+        }
+        .sidebar .nav-link {
+            color: #333;
+        }
+        .sidebar .nav-link.active {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .table-responsive {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .price-up {
+            color: #d9534f;
+        }
+        .price-down {
+            color: #5cb85c;
+        }
+        .elephant-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .elephant-buy {
+            background-color: #5cb85c;
+        }
+        .elephant-sell {
+            background-color: #d9534f;
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-graph-up"></i> 大象策略管理
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{{ url_for('index') }}">
+                            <i class="bi bi-house-door"></i> 首页
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/monitor' %}active{% endif %}" href="{{ url_for('monitor') }}">
+                            <i class="bi bi-display"></i> 监控
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+                            <i class="bi bi-gear"></i> 设置
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/symbol_params' %}active{% endif %}" href="{{ url_for('symbol_params') }}">
+                            <i class="bi bi-sliders"></i> 品种参数
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/logs' %}active{% endif %}" href="{{ url_for('logs') }}">
+                            <i class="bi bi-journal-text"></i> 日志
+                        </a>
+                    </li>
+                </ul>
+                <div class="navbar-text text-light me-3">
+                    <span id="strategy-status-indicator" class="badge bg-secondary">未连接</span>
+                </div>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> 退出
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- 页面内容 -->
+    <div class="container-fluid">
+        <div class="row">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- 底部版权信息 -->
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted">大象策略 &copy; 2025 All Rights Reserved.</span>
+        </div>
+    </footer>
+
+    <!-- JavaScript 库 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+    
+    <!-- 自定义Socket.IO配置 -->
+    <script src="{{ url_for('static', filename='js/socket-config.js') }}"></script>
+
+    <!-- 自动刷新 -->
+    <script>
+        $(document).ready(function() {
+            // 自动刷新页面（如果设置了刷新间隔）
+            {% if 刷新间隔 and 刷新间隔 > 0 %}
+            setTimeout(function() {
+                location.reload();
+            }, {{ 刷新间隔 * 1000 }});
+            {% endif %}
+            
+            // 注意：Socket.IO连接已移至socket-config.js文件中配置
+            
+            // 更新策略状态 - 使用全局socket变量
+            if (window.socketIO) {
+                window.socketIO.on('strategy_status', function(data) {
+                    $('#strategy-status-indicator').text(data.status);
+                    if (data.status === '运行中') {
+                        $('#strategy-status-indicator').removeClass().addClass('badge bg-success');
+                    } else if (data.status === '已停止') {
+                        $('#strategy-status-indicator').removeClass().addClass('badge bg-danger');
+                    } else if (data.status === '就绪') {
+                        $('#strategy-status-indicator').removeClass().addClass('badge bg-warning');
+                    } else {
+                        $('#strategy-status-indicator').removeClass().addClass('badge bg-secondary');
+                    }
+                });
+            }
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html> 
